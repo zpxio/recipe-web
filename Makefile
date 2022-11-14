@@ -2,6 +2,7 @@ GOCMD=go
 GOTEST=$(GOCMD) test
 GOVET=$(GOCMD) vet
 BINARY_NAME=recipeserv
+QA_ARGS=
 VERSION?=0.1.0
 SERVICE_PORT?=3000
 DOCKER_REGISTRY?= #if set it should finished by /
@@ -21,6 +22,9 @@ all: help
 build: ## Build your project and put the output binary in out/bin/
 	mkdir -p out/bin
 	GO111MODULE=on $(GOCMD) build -mod vendor -o out/bin/$(BINARY_NAME) ./cmd/${BINARY_NAME}
+
+qarun: clean build ## Make a clean build and run the server in QA mode
+	out/bin/${BINARY_NAME} ${QA_ARGS}
 
 clean: ## Remove build related file
 	rm -fr ./bin
