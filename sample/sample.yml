@@ -1,0 +1,4 @@
+# sample config
+
+server:
+  port: 1323

@@ -17,42 +17,58 @@
 package main
 
 import (
-	"context"
-	"net/http"
+	"fmt"
+	"github.com/apex/log"
+	"github.com/mkideal/cli"
+	config2 "github.org/zpxio/recipe-web/pkg/config"
+	"github.org/zpxio/recipe-web/pkg/server"
 	"os"
 	"os/signal"
 	"time"
-
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/log"
 )
 
+type argT struct {
+	cli.Helper
+	ConfigPath    string `cli:"config" usage:"Server configuration file"`
+	BaseDirectory string `cli:"d" usage:"Base server directory"`
+
+	//Options
+
+}
+
 func main() {
-	// Setup
-	e := echo.New()
-	e.Logger.SetLevel(log.INFO)
-	e.GET("/", func(c echo.Context) error {
-		time.Sleep(5 * time.Second)
-		return c.JSON(http.StatusOK, "OK")
-	})
 
-	// Start server
-	go func() {
-		if err := e.Start(":1323"); err != nil && err != http.ErrServerClosed {
-			e.Logger.Fatal("shutting down the server")
+	os.Exit(cli.Run(new(argT), func(ctx *cli.Context) error {
+		log.Infof("Starting up.")
+
+		ctx.JSONln(ctx.Argv())
+		argv := ctx.Argv().(*argT)
+
+		// Load config
+		log.Infof("Loading configuration file: %s", argv.ConfigPath)
+		config, configErr := config2.Load(argv.ConfigPath)
+		if configErr != nil {
+			return fmt.Errorf("could not load config: %s", configErr)
 		}
-	}()
 
-	// Wait for interrupt signal to gracefully shut down the server with a timeout of 10 seconds.
-	// Use a buffered channel to avoid missing signals as recommended for signal.Notify
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
-	<-quit
+		// Setup
+		srv := server.CreateServer(config)
 
-	// Execute a timed shutdown of the server
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := e.Shutdown(ctx); err != nil {
-		e.Logger.Fatal(err)
-	}
+		// Start server
+		err := srv.Start()
+		if err != nil {
+			log.Fatalf("failed to start server: %s", err)
+		}
+
+		// Wait for interrupt signal to gracefully shut down the server with a timeout of 10 seconds.
+		// Use a buffered channel to avoid missing signals as recommended for signal.Notify
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, os.Interrupt)
+		<-quit
+
+		// Execute a timed shutdown of the server
+		srv.Shutdown(10 * time.Second)
+
+		return nil
+	}))
 }
