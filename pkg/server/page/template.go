@@ -15,14 +15,3 @@
  */
 
 package page
-
-import (
-	"github.com/labstack/echo/v4"
-	"net/http"
-)
-
-func IndexPage() func(c echo.Context) error {
-	return func(c echo.Context) error {
-		return c.Render(http.StatusOK, "index.html", nil)
-	}
-}

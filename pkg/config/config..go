@@ -25,18 +25,27 @@ import (
 
 type Config struct {
 	BaseDir string
-	Server  struct {
-		LocalIP string `yaml:"localip"`
-		Port    int    `yaml:"port"`
-	} `yaml:"server"`
-	Content struct {
-	} `yaml:"content"`
+	Server  ServerConfig  `yaml:"server"`
+	Content ContentConfig `yaml:"content"`
+}
+
+type ServerConfig struct {
+	LocalIP string `yaml:"local_ip"`
+	Port    int    `yaml:"port"`
+}
+
+type ContentConfig struct {
+	TemplateDir string `yaml:"template_dir"`
 }
 
 func Load(path string) (Config, error) {
 	realpath := filepath.Clean(path)
 	c := Config{
 		BaseDir: filepath.Dir(realpath),
+
+		Content: ContentConfig{
+			TemplateDir: "template",
+		},
 	}
 
 	configData, err := os.Open(realpath)

@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/labstack/echo/v4"
+	echomiddleware "github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"github.org/zpxio/recipe-web/pkg/config"
 	"github.org/zpxio/recipe-web/pkg/server/middleware"
@@ -40,12 +41,14 @@ func CreateServer(config config.Config) *Server {
 	if l, ok := e.Logger.(*log.Logger); ok {
 		l.SetHeader("${time_rfc3339} ${level}")
 	}
-	e.Logger.SetLevel(99)
+	e.Logger.SetLevel(log.INFO)
 
 	s := &Server{
 		eInst:  e,
 		Config: config,
 	}
+
+	e.Renderer = ParseTemplates(config)
 
 	s.initGlobalMiddleware()
 	s.initStandardEndpoints()
@@ -82,10 +85,14 @@ func (s *Server) initGlobalMiddleware() {
 	s.eInst.Pre(middleware.RequestTime)
 	s.eInst.Pre(middleware.RequestID)
 	s.eInst.Pre(middleware.RequestLogger)
+
+	s.eInst.Use(echomiddleware.LoggerWithConfig(echomiddleware.LoggerConfig{
+		Format: "${time_rfc3339} ${level} ${method} ${uri} ${status} (${remote_ip}) [${error}]",
+	}))
 }
 
 func (s *Server) initStandardEndpoints() {
-	s.eInst.GET("/", page.Index)
+	s.eInst.GET("/", page.IndexPage())
 }
 
 func (s *Server) initDiagnosticEndpoints() {
